@@ -94,7 +94,7 @@ class AssignmentEvaluator:
             )
             
             # Log the results
-            self._log_evaluation_result(roll_number, question, run_result, marks, feedback)
+            self._log_evaluation_result(roll_number, question, run_result, float_marks, feedback)
             self.console.print(f"[bold green]✓ Marks ({marks}) and feedback saved[/bold green]")
 
         except Exception as e:
@@ -103,7 +103,7 @@ class AssignmentEvaluator:
         finally:
             shutil.rmtree(os.path.join(self.output_log_path, roll_number), ignore_errors=True)
 
-    def _log_evaluation_result(self, roll_number: str, question: str, run_result: Dict, marks: str, feedback: str):
+    def _log_evaluation_result(self, roll_number: str, question: str, run_result: Dict, marks: float, feedback: str):
         """
         Log the results of an evaluation
         
