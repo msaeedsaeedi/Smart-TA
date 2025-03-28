@@ -18,13 +18,6 @@ def main():
     evaluator = AssignmentEvaluator(submissions_path, output_log_path)
     console = Console()
     
-    # Display welcome header
-    console.print(Panel.fit(
-        "[bold cyan]Assignment Evaluation System[/bold cyan]",
-        border_style="blue",
-        padding=(1, 10)
-    ))
-    
     while True:
         roll_number = Prompt.ask(
             "\n[bold green]Enter roll number[/bold green]", 
@@ -43,16 +36,10 @@ def main():
         if not evaluator.find_student_zip(roll_number):
             console.print(f"[bold red]No submission found for roll number:[/bold red] {roll_number}")
             continue
-
-        # Show student info panel
-        console.print(Panel(
-            f"[bold green]Processing submission for:[/bold green] [cyan]{roll_number}[/cyan]",
-            border_style="green"
-        ))
         
         while True:
             question = Prompt.ask(
-                "\n[bold blue]Enter question number[/bold blue]", 
+                "[bold green]Enter question number[/bold green]", 
                 default="back"
             )
             
