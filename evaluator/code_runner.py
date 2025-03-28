@@ -122,8 +122,6 @@ class CodeRunner:
             # Set stdin to non-blocking mode
             tty.setraw(sys.stdin.fileno())
             
-            # Interaction and output capture
-            output_summary = ""
             running = True
             
             while running:
@@ -133,7 +131,6 @@ class CodeRunner:
                     
                     if not rlist:
                         self.console.print("\nExecution timed out", style="warning")
-                        output_summary += "\n[SYSTEM] Execution timed out after {} seconds".format(timeout)
                         process.terminate()
                         break
                     
@@ -150,10 +147,6 @@ class CodeRunner:
                                 decoded_data = data.decode('utf-8', errors='replace')
                                 print(decoded_data, end='', flush=True)  # Keep this as is for real-time output
                                 
-                                # Limit output summary
-                                output_summary += decoded_data
-                                if len(output_summary) > 1000:
-                                    output_summary = output_summary[-1000:]
                             except (OSError, ValueError):
                                 running = False
                                 break
@@ -165,7 +158,6 @@ class CodeRunner:
                                 # Check for Ctrl+C (ASCII value 3)
                                 if user_input == b'\x03':
                                     self.console.print("\n[SYSTEM] Execution stopped by user (Ctrl+C)", style="warning")
-                                    output_summary += "\n[SYSTEM] Execution stopped by user (Ctrl+C)"
                                     running = False
                                     break
                                 os.write(master, user_input)
@@ -174,7 +166,6 @@ class CodeRunner:
                                 
                 except KeyboardInterrupt:
                     self.console.print("\n[SYSTEM] Execution stopped by user (KeyboardInterrupt)", style="warning")
-                    output_summary += "\n[SYSTEM] Execution stopped by user (KeyboardInterrupt)"
                     running = False
             
             # Check if process is still running
@@ -184,7 +175,6 @@ class CodeRunner:
                     process.wait(timeout=5)
                 except subprocess.TimeoutExpired:
                     process.kill()
-                    output_summary += "\n[SYSTEM] Process had to be forcibly terminated"
             
             # Restore terminal settings
             termios.tcsetattr(sys.stdin, termios.TCSADRAIN, old_stdin_settings)
@@ -204,7 +194,6 @@ class CodeRunner:
             ))
             return {
                 'compiled': True,
-                'output_summary': output_summary,
                 'return_code': process.returncode,
                 'execution_status': execution_status
             }
@@ -213,7 +202,6 @@ class CodeRunner:
             self.console.print(f"\n[SYSTEM ERROR] {str(e)}", style="error")
             return {
                 'compiled': True,
-                'output_summary': f"[SYSTEM ERROR] Unexpected error during execution: {str(e)}",
                 'return_code': -1,
                 'execution_status': 'System Error'
             }
