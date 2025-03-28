@@ -113,41 +113,54 @@ class CodeRunner:
             
             while running:
                 # Wait for data from either the process or user input
-                rlist, _, _ = select.select([master, sys.stdin], [], [], timeout)
-                
-                if not rlist:
-                    print("\nExecution timed out")
-                    process.terminate()
-                    break
-                
-                for ready_fd in rlist:
-                    if ready_fd == master:
-                        # Process output available
-                        try:
-                            data = os.read(master, 1024)
-                            if not data:
+                try:
+                    rlist, _, _ = select.select([master, sys.stdin], [], [], timeout)
+                    
+                    if not rlist:
+                        print("\nExecution timed out")
+                        output_summary += "\n[SYSTEM] Execution timed out after {} seconds".format(timeout)
+                        process.terminate()
+                        break
+                    
+                    for ready_fd in rlist:
+                        if ready_fd == master:
+                            # Process output available
+                            try:
+                                data = os.read(master, 1024)
+                                if not data:
+                                    running = False
+                                    break
+                                    
+                                # Decode and print output
+                                decoded_data = data.decode('utf-8', errors='replace')
+                                print(decoded_data, end='', flush=True)
+                                
+                                # Limit output summary
+                                output_summary += decoded_data
+                                if len(output_summary) > 1000:
+                                    output_summary = output_summary[-1000:]
+                            except (OSError, ValueError):
                                 running = False
                                 break
+                        
+                        elif ready_fd == sys.stdin:
+                            # User input available
+                            try:
+                                user_input = os.read(sys.stdin.fileno(), 1)
+                                # Check for Ctrl+C (ASCII value 3)
+                                if user_input == b'\x03':
+                                    print("\n[SYSTEM] Execution stopped by user (Ctrl+C)")
+                                    output_summary += "\n[SYSTEM] Execution stopped by user (Ctrl+C)"
+                                    running = False
+                                    break
+                                os.write(master, user_input)
+                            except (OSError, ValueError):
+                                pass
                                 
-                            # Decode and print output
-                            decoded_data = data.decode('utf-8', errors='replace')
-                            print(decoded_data, end='', flush=True)
-                            
-                            # Limit output summary
-                            output_summary += decoded_data
-                            if len(output_summary) > 1000:
-                                output_summary = output_summary[-1000:]
-                        except (OSError, ValueError):
-                            running = False
-                            break
-                    
-                    elif ready_fd == sys.stdin:
-                        # User input available
-                        try:
-                            user_input = os.read(sys.stdin.fileno(), 1)
-                            os.write(master, user_input)
-                        except (OSError, ValueError):
-                            pass
+                except KeyboardInterrupt:
+                    print("\n[SYSTEM] Execution stopped by user (KeyboardInterrupt)")
+                    output_summary += "\n[SYSTEM] Execution stopped by user (KeyboardInterrupt)"
+                    running = False
             
             # Check if process is still running
             if process.poll() is None:
@@ -156,6 +169,7 @@ class CodeRunner:
                     process.wait(timeout=5)
                 except subprocess.TimeoutExpired:
                     process.kill()
+                    output_summary += "\n[SYSTEM] Process had to be forcibly terminated"
             
             # Restore terminal settings
             termios.tcsetattr(sys.stdin, termios.TCSADRAIN, old_stdin_settings)
@@ -165,12 +179,34 @@ class CodeRunner:
             print(" PROGRAM EXECUTION END ".center(60, "="))
             print(f"{boundary_line}\n")
             
+            execution_status = "Completed" if process.returncode == 0 else f"Terminated with code {process.returncode}"
+            print(f"[SYSTEM] Execution status: {execution_status}")
+            
             return {
                 'compiled': True,
                 'output_summary': output_summary,
-                'return_code': process.returncode
+                'return_code': process.returncode,
+                'execution_status': execution_status
             }
         
+        except Exception as e:
+            print(f"\n[SYSTEM ERROR] {str(e)}")
+            return {
+                'compiled': True,
+                'output_summary': f"[SYSTEM ERROR] Unexpected error during execution: {str(e)}",
+                'return_code': -1,
+                'execution_status': 'System Error'
+            }
+            
         finally:
-            # Restore terminal settings
-            termios.tcsetattr(sys.stdin, termios.TCSADRAIN, old_stdin_settings)
+            # Always restore terminal settings
+            try:
+                termios.tcsetattr(sys.stdin, termios.TCSADRAIN, old_stdin_settings)
+            except:
+                pass
+            
+            # Close file descriptors
+            try:
+                os.close(master)
+            except:
+                pass
