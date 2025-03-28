@@ -1,0 +1,48 @@
+# Python bytecode files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Distribution / packaging
+dist/
+build/
+*.egg-info/
+
+# Virtual environments
+venv/
+env/
+ENV/
+.venv/
+
+# IDE specific files
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Log files
+logs/*.json
+logs/*.log
+
+# Student submissions and extracted files
+submissions/
+extract_*/
+
+# Runtime artifacts
+sandbox_*/
+
+# Flask session files
+.flask_session/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# Environment variables
+.env
+.env.local
+
+# macOS specific files
+.DS_Store
+
+# Windows specific files
+Thumbs.db
