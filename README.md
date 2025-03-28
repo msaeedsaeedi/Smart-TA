@@ -1,4 +1,4 @@
-# 🚀 Assignment Evaluation System: Automating the Grading Workflow
+# Smart TA
 
 [![Python Version](https://img.shields.io/badge/python-3.6+-blue.svg)](https://www.python.org/downloads/)
 [![Dependencies](https://img.shields.io/badge/dependencies-up%20to%20date-brightgreen.svg)](https://github.com/your-username/your-repo/blob/main/requirements.txt)
