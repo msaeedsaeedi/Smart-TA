@@ -10,6 +10,7 @@ import subprocess
 from typing import Dict
 from rich.console import Console
 from rich.theme import Theme
+from rich.panel import Panel
 
 class CodeRunner:
     def __init__(self, output_log_path: str):
@@ -60,8 +61,11 @@ class CodeRunner:
                 )
                 
                 if compile_result.returncode != 0:
-                    self.console.print("Compilation Error:", style="error")
-                    self.console.print(compile_result.stderr)
+                    self.console.print(Panel(
+                        f"[bold red]✗ Compilation Error[/bold red]",
+                        border_style="red",
+                    ))
+                    self.console.print(compile_result.stderr, style="error")
                     return {
                         'compiled': False,
                         'compile_error_summary': compile_result.stderr[:500]  # Truncate error message
@@ -193,8 +197,11 @@ class CodeRunner:
             
             execution_status = "Completed" if process.returncode == 0 else f"Terminated with code {process.returncode}"
             status_style = "success" if process.returncode == 0 else "error"
-            self.console.print(f"[SYSTEM] Execution status: {execution_status}", style=status_style)
-            
+            self.console.print(Panel(
+                f"[{status_style}]Execution status: {execution_status}[/{status_style}]",
+                border_style=("green" if process.returncode == 0 else "red"),
+                title="System"
+            ))
             return {
                 'compiled': True,
                 'output_summary': output_summary,

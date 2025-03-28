@@ -19,6 +19,7 @@ def main():
     console = Console()
     
     while True:
+        console.clear()
         roll_number = Prompt.ask(
             "\n[bold green]Enter roll number[/bold green]", 
             default="exit"
