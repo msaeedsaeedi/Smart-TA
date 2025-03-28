@@ -77,9 +77,17 @@ class AssignmentEvaluator:
             run_result = self.code_runner.compile_and_run_code(file_path)
 
             # Ask for evaluation
-            marks = Prompt.ask(
-                f"[bold blue]Enter marks [/bold blue]"
-            )
+            while True:
+                marks = Prompt.ask("[bold blue]Enter marks [/bold blue]")
+                try:
+                    float_marks = float(marks)
+                    if float_marks >= 0:
+                        break
+                    self.console.print("[bold red]Marks must be non-negative[/bold red]")
+                except ValueError:
+                    self.console.print("[bold red]Please enter a valid number[/bold red]")
+            
+            # Ask for feedback
             feedback = Prompt.ask(
                 "[bold cyan]Additional feedback (optional)[/bold cyan]",
                 default=""
