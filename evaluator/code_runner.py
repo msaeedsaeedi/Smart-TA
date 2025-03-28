@@ -8,6 +8,9 @@ import uuid
 import shutil
 import subprocess
 from typing import Dict
+from rich.console import Console
+from rich.theme import Theme
+from rich.panel import Panel
 
 class CodeRunner:
     def __init__(self, output_log_path: str):
@@ -17,6 +20,16 @@ class CodeRunner:
         :param output_log_path: Path to store temporary files and logs
         """
         self.output_log_path = output_log_path
+        # Create a rich console with custom theme
+        custom_theme = Theme({
+            "info": "cyan",
+            "warning": "yellow",
+            "error": "bold red",
+            "success": "bold green",
+            "boundary": "blue",
+            "execution": "bold white"
+        })
+        self.console = Console(theme=custom_theme)
     
     def compile_and_run_code(self, file_path: str, timeout: int = 300) -> Dict:
         """
@@ -48,8 +61,11 @@ class CodeRunner:
                 )
                 
                 if compile_result.returncode != 0:
-                    print("Compilation Error:")
-                    print(compile_result.stderr)
+                    self.console.print(Panel(
+                        f"[bold red]✗ Compilation Error[/bold red]",
+                        border_style="red",
+                    ))
+                    self.console.print(compile_result.stderr, style="error")
                     return {
                         'compiled': False,
                         'compile_error_summary': compile_result.stderr[:500]  # Truncate error message
@@ -63,7 +79,7 @@ class CodeRunner:
             return self._run_in_pty(run_command, timeout)
         
         except Exception as e:
-            print(f"Execution Error: {e}")
+            self.console.print(f"Execution Error: {e}", style="error")
             return {'error': str(e)[:500]}  # Truncate error message
         
         finally:
@@ -86,10 +102,9 @@ class CodeRunner:
         
         try:
             # Print a clear boundary before execution
-            boundary_line = "=" * 60
-            print(f"\n{boundary_line}")
-            print(" PROGRAM EXECUTION START ".center(60, "="))
-            print(f"{boundary_line}\n")
+            self.console.rule(style="boundary")
+            self.console.print(" PROGRAM EXECUTION START ", style="execution", justify="center")
+            self.console.rule(style="boundary")
             
             # Start the process
             process = subprocess.Popen(
@@ -117,7 +132,7 @@ class CodeRunner:
                     rlist, _, _ = select.select([master, sys.stdin], [], [], timeout)
                     
                     if not rlist:
-                        print("\nExecution timed out")
+                        self.console.print("\nExecution timed out", style="warning")
                         output_summary += "\n[SYSTEM] Execution timed out after {} seconds".format(timeout)
                         process.terminate()
                         break
@@ -133,7 +148,7 @@ class CodeRunner:
                                     
                                 # Decode and print output
                                 decoded_data = data.decode('utf-8', errors='replace')
-                                print(decoded_data, end='', flush=True)
+                                print(decoded_data, end='', flush=True)  # Keep this as is for real-time output
                                 
                                 # Limit output summary
                                 output_summary += decoded_data
@@ -149,7 +164,7 @@ class CodeRunner:
                                 user_input = os.read(sys.stdin.fileno(), 1)
                                 # Check for Ctrl+C (ASCII value 3)
                                 if user_input == b'\x03':
-                                    print("\n[SYSTEM] Execution stopped by user (Ctrl+C)")
+                                    self.console.print("\n[SYSTEM] Execution stopped by user (Ctrl+C)", style="warning")
                                     output_summary += "\n[SYSTEM] Execution stopped by user (Ctrl+C)"
                                     running = False
                                     break
@@ -158,7 +173,7 @@ class CodeRunner:
                                 pass
                                 
                 except KeyboardInterrupt:
-                    print("\n[SYSTEM] Execution stopped by user (KeyboardInterrupt)")
+                    self.console.print("\n[SYSTEM] Execution stopped by user (KeyboardInterrupt)", style="warning")
                     output_summary += "\n[SYSTEM] Execution stopped by user (KeyboardInterrupt)"
                     running = False
             
@@ -175,13 +190,18 @@ class CodeRunner:
             termios.tcsetattr(sys.stdin, termios.TCSADRAIN, old_stdin_settings)
             
             # Print a clear boundary after execution
-            print(f"\n{boundary_line}")
-            print(" PROGRAM EXECUTION END ".center(60, "="))
-            print(f"{boundary_line}\n")
+            self.console.line(1)
+            self.console.rule(style="boundary")
+            self.console.print(" PROGRAM EXECUTION END ", style="execution", justify="center")
+            self.console.rule(style="boundary")
             
             execution_status = "Completed" if process.returncode == 0 else f"Terminated with code {process.returncode}"
-            print(f"[SYSTEM] Execution status: {execution_status}")
-            
+            status_style = "success" if process.returncode == 0 else "error"
+            self.console.print(Panel(
+                f"[{status_style}]Execution status: {execution_status}[/{status_style}]",
+                border_style=("green" if process.returncode == 0 else "red"),
+                title="System"
+            ))
             return {
                 'compiled': True,
                 'output_summary': output_summary,
@@ -190,7 +210,7 @@ class CodeRunner:
             }
         
         except Exception as e:
-            print(f"\n[SYSTEM ERROR] {str(e)}")
+            self.console.print(f"\n[SYSTEM ERROR] {str(e)}", style="error")
             return {
                 'compiled': True,
                 'output_summary': f"[SYSTEM ERROR] Unexpected error during execution: {str(e)}",
