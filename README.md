@@ -1,7 +1,7 @@
 # Smart TA
 
 [![Python Version](https://img.shields.io/badge/python-3.6+-blue.svg)](https://www.python.org/downloads/)
-[![Dependencies](https://img.shields.io/badge/dependencies-up%20to%20date-brightgreen.svg)](https://github.com/your-username/your-repo/blob/main/requirements.txt)
+[![Dependencies](https://img.shields.io/badge/dependencies-up%20to%20date-brightgreen.svg)](https://github.com/msaeedsaeedi/smart-ta/blob/main/requirements.txt)
 [![License](https://img.shields.io/badge/license-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 Tired of manually compiling and running student code? The **Assignment Evaluation System** is a command-line tool designed to streamline the evaluation of C/C++ programming assignments. It offers a secure and efficient way to process submissions, execute code in isolated environments, and generate comprehensive evaluation reports.
