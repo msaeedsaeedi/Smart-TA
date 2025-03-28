@@ -25,8 +25,6 @@ def main():
         )
         
         if roll_number.lower() == 'exit':
-            console.print(Panel("[bold yellow]Exiting Application. Goodbye![/bold yellow]", 
-                          border_style="yellow"))
             break
         
         if not evaluator.validate_roll_number(roll_number):
@@ -48,14 +46,7 @@ def main():
             
             try:
                 evaluator.evaluate_submission(roll_number, question)
-                
-                # Success message
-                console.print(Panel(
-                    f"[bold green]✓[/bold green] Evaluation for [cyan]{roll_number}[/cyan] on question [cyan]{question}[/cyan] completed.",
-                    border_style="green"
-                ))
             except Exception as e:
-                # Error message
                 console.print(Panel(
                     f"[bold red]✗ Error:[/bold red] {str(e)}",
                     border_style="red"
