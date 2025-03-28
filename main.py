@@ -47,9 +47,7 @@ def main():
                 break
             
             try:
-                # Show processing message
-                with console.status(f"[bold blue]Evaluating Q{question} for {roll_number}...[/bold blue]"):
-                    evaluator.evaluate_submission(roll_number, question)
+                evaluator.evaluate_submission(roll_number, question)
                 
                 # Success message
                 console.print(Panel(
@@ -62,6 +60,7 @@ def main():
                     f"[bold red]✗ Error:[/bold red] {str(e)}",
                     border_style="red"
                 ))
+            console.line(1)
 
 if __name__ == "__main__":
     main()
