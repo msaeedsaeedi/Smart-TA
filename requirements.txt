@@ -1,0 +1,2 @@
+# Core dependencies
+rich==13.9.0  # Rich text and formatting in the terminal
