@@ -4,6 +4,8 @@ import re
 import shutil
 from typing import Dict
 from datetime import datetime
+from rich.prompt import Prompt
+from rich.console import Console
 
 from utils.file_utils import find_student_zip
 from evaluator.submission_processor import SubmissionProcessor
@@ -30,6 +32,7 @@ class AssignmentEvaluator:
         # Initialize components
         self.submission_processor = SubmissionProcessor()
         self.code_runner = CodeRunner(self.output_log_path)
+        self.console = Console()
 
     def validate_roll_number(self, roll_number: str) -> bool:
         """
@@ -72,9 +75,19 @@ class AssignmentEvaluator:
             # Process the submission
             file_path = os.path.join(self.output_log_path, roll_number, matching_files[0])
             run_result = self.code_runner.compile_and_run_code(file_path)
+
+            # Ask for evaluation
+            marks = Prompt.ask(
+                f"[bold blue]Enter marks [/bold blue]"
+            )
+            feedback = Prompt.ask(
+                "[bold cyan]Additional feedback (optional)[/bold cyan]",
+                default=""
+            )
             
             # Log the results
-            self._log_evaluation_result(roll_number, question, run_result)
+            self._log_evaluation_result(roll_number, question, run_result, marks, feedback)
+            self.console.print(f"[bold green]✓ Marks ({marks}) and feedback saved[/bold green]")
 
         except Exception as e:
             raise Exception(f"(Evaluation Error) {e}")
@@ -82,13 +95,15 @@ class AssignmentEvaluator:
         finally:
             shutil.rmtree(os.path.join(self.output_log_path, roll_number), ignore_errors=True)
 
-    def _log_evaluation_result(self, roll_number: str, question: str, run_result: Dict):
+    def _log_evaluation_result(self, roll_number: str, question: str, run_result: Dict, marks: str, feedback: str):
         """
         Log the results of an evaluation
         
         :param roll_number: Student's roll number
         :param question: Question being evaluated
         :param run_result: Result of running the code
+        :param marks: Marks awarded
+        :param feedback: Additional feedback
         """
         # Initialize student log if not exists
         if roll_number not in self.student_logs:
@@ -103,7 +118,9 @@ class AssignmentEvaluator:
             'details': {
                 k: v for k, v in run_result.items() 
                 if k not in ['output_summary']
-            }
+            },
+            'marks': marks,
+            'feedback': feedback,
         }
         
         # Save comprehensive student log
