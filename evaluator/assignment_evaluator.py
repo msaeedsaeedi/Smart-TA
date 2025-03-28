@@ -95,13 +95,11 @@ class AssignmentEvaluator:
             self.student_logs[roll_number] = {
                 'roll_number': roll_number,
                 'submissions': {},
-                'evaluated_at': datetime.now().isoformat()
             }
         
         # Log results for this question
         self.student_logs[roll_number]['submissions'][question] = {
             'timestamp': datetime.now().isoformat(),
-            'status': self.determine_question_status(run_result),
             'details': {
                 k: v for k, v in run_result.items() 
                 if k not in ['output_summary']
@@ -124,17 +122,4 @@ class AssignmentEvaluator:
             )
             with open(log_path, 'w') as f:
                 json.dump(self.student_logs[roll_number], f, indent=2)
-    
-    def determine_question_status(self, run_result):
-        """
-        Determine status of a single question
-        
-        :param run_result: Result of code execution
-        :return: Status string
-        """
-        if not run_result.get('compiled', False):
-            return 'failed_compilation'
-        if run_result.get('error'):
-            return 'runtime_error'
-        return 'compiled_successfully'
     
