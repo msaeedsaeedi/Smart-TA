@@ -43,7 +43,6 @@ def main():
             
             if question.lower() == '0':
                 evaluator.evaluate_submission(roll_number)
-                console.clear()
                 break
             
             try:

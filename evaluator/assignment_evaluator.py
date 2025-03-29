@@ -109,7 +109,12 @@ class AssignmentEvaluator:
                 
                 for q_num in question_keys:
                     self._evaluate_single_question(roll_number, q_num, extraction_dir)
-
+            self.console.clear()
+            self.show_summary(roll_number)
+            self.console.print("[bold green]Press Enter to continue...[/bold green]")
+            Prompt.ask("")
+            self.console.clear()
+            
         except Exception as e:
             self.console.print(f"[bold red]Evaluation Error: {str(e)}[/bold red]")
             
@@ -242,3 +247,83 @@ class AssignmentEvaluator:
             )
             with open(log_path, 'w') as f:
                 json.dump(self.student_logs[roll_number], f, indent=2)
+
+    def show_summary(self, roll_number: str):
+        """
+        Show a summary of marks for a student
+        
+        :param roll_number: Student's roll number
+        """
+        if roll_number not in self.student_logs:
+            self.console.print(f"[bold red]No evaluation data found for {roll_number}[/bold red]")
+            return
+            
+        log = self.student_logs[roll_number]
+        total_awarded = 0
+        total_possible = 0
+        
+        from rich.table import Table
+        table = Table(title=f"Evaluation Summary for {roll_number}")
+        table.add_column("Question", style="cyan")
+        table.add_column("Marks", style="green")
+        table.add_column("Status", style="yellow")
+        table.add_column("Feedback", style="blue")
+        
+        marks_distribution = self.config_handler.get_marks_distribution()
+        
+        # For each question in the marks distribution
+        for key in marks_distribution.keys():
+            # Extract question number from "Question X" format
+            q_num = key.split(" ")[1] if key.startswith("Question ") else key
+            max_marks = float(marks_distribution[key])
+            total_possible += max_marks
+            
+            # Check if question was evaluated
+            if q_num in log['submissions']:
+                data = log['submissions'][q_num]
+                marks = data.get('awarded_marks', 0)
+                total_awarded += marks
+                
+                # Determine status
+                if data.get('details', {}).get('missing', False):
+                    status = "Missing"
+                elif not data.get('details', {}).get('compiled', True):
+                    status = "Compile Error"
+                elif data.get('details', {}).get('return_code', 0) != 0:
+                    status = f"Runtime Error ({data.get('details', {}).get('return_code', 'Unknown')})"
+                else:
+                    status = "Completed"
+                
+                # Format feedback (truncate if too long)
+                feedback = data.get('feedback', '')
+                if len(feedback) > 30:
+                    feedback = feedback[:27] + '...'
+                
+                table.add_row(
+                    f"Q{q_num}", 
+                    f"{marks}/{max_marks}", 
+                    status,
+                    feedback
+                )
+            else:
+                # Question not evaluated yet
+                table.add_row(
+                    f"Q{q_num}", 
+                    f"--/{max_marks}", 
+                    "Not Evaluated",
+                    ""
+                )
+            
+        # Show summary panel
+        self.console.print(Panel(
+            f"Student: {roll_number}\n"
+            f"Assignment: {log.get('assignment', 'Unknown')}\n"
+            f"Evaluator: {log.get('evaluator', 'Unknown')}\n"
+            f"Total Score: {total_awarded}/{total_possible} ({(total_awarded/total_possible*100) if total_possible else 0:.1f}%)",
+            title="Evaluation Summary",
+            border_style="cyan"
+        ))
+        
+        # Display marks table
+        self.console.print(table)
+        
