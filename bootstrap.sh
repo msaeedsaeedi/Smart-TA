@@ -1,2 +1,4 @@
-source .venv/bin/activate
-python main.py
+docker run -it --rm \
+  -v "$(pwd)/logs:/app/logs" \
+  -v "$(pwd)/submissions:/app/submissions" \
+  smart-ta
