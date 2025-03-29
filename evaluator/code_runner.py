@@ -61,11 +61,12 @@ class CodeRunner:
                 )
                 
                 if compile_result.returncode != 0:
+                    self.console.print(compile_result.stderr, style="error")
                     self.console.print(Panel(
                         f"[bold red]✗ Compilation Error[/bold red]",
                         border_style="red",
+                        title="System"
                     ))
-                    self.console.print(compile_result.stderr, style="error")
                     return {
                         'compiled': False,
                         'compile_error_summary': compile_result.stderr[:500]  # Truncate error message

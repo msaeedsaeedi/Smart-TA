@@ -2,10 +2,6 @@ from evaluator import AssignmentEvaluator
 from rich.console import Console
 from rich.panel import Panel
 from rich.prompt import Prompt
-from rich.table import Table
-from rich import print as rprint
-from rich.style import Style
-from rich.text import Text
 
 def main():
     """
@@ -17,9 +13,9 @@ def main():
     # Initialize the evaluator and rich console
     evaluator = AssignmentEvaluator(submissions_path, output_log_path)
     console = Console()
+    console.clear()
     
     while True:
-        console.clear()
         roll_number = Prompt.ask(
             "\n[bold green]Enter roll number[/bold green]", 
             default="exit"
@@ -39,14 +35,19 @@ def main():
         while True:
             question = Prompt.ask(
                 "[bold green]Enter question number[/bold green]", 
-                default="back"
+                default="0",
             )
             
-            if question.lower() == 'back':
+            if question.lower() == '-1':
+                break
+            
+            if question.lower() == '0':
+                evaluator.evaluate_submission(roll_number)
                 break
             
             try:
                 evaluator.evaluate_submission(roll_number, question)
+                console.clear()
             except Exception as e:
                 console.print(Panel(
                     f"[bold red]✗ Error:[/bold red] {str(e)}",
