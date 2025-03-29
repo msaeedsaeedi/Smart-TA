@@ -1,0 +1,18 @@
+{
+    "Assignment Name": "Assignment 1",
+    "Evaluated By": "Mohammad Saeed",
+    "Total Marks": 100,
+    "Marks Distribution": {
+        "Question 1": 25,
+        "Question 2": 25,
+        "Question 3": 25,
+        "Question 4": 25
+    },
+    "Submission Guidelines": {
+        "Format": "ZIP",
+        "File Name": "^[a-z]\\d{6}$"
+    },
+    "Marks Deduction": {
+        "Code Style": -10
+    }
+}
