@@ -79,8 +79,7 @@ class AssignmentEvaluator:
         # Extract the submission
         try:
             extraction_dir = os.path.join(self.output_log_path, roll_number)
-            self.submission_processor.extract_submission(student_zip, self.output_log_path)
-            
+            self.submission_processor.extract_submission(student_zip, extraction_dir)
             # Get all configured questions
             marks_distribution = self.config_handler.get_marks_distribution()
             question_keys = []
