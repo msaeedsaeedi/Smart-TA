@@ -11,8 +11,5 @@
     "Submission Guidelines": {
         "Format": "ZIP",
         "File Name": "^[a-z]\\d{6}$"
-    },
-    "Marks Deduction": {
-        "Code Style": -10
     }
 }
