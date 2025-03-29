@@ -13,6 +13,8 @@ Tired of manually compiling and running student code? The **Assignment Evaluatio
 * **Interactive Evaluation:** Supports programs requiring user input through a pseudo-terminal interface.
 * **Detailed Insights:** Generates structured JSON logs for each evaluation, providing a clear record of the execution process.
 * **User-Friendly Interface:** Presents a clean and formatted terminal interface powered by the `rich` library.
+* **Dockerized Deployment:** Easily run the system in an isolated Docker container for better portability and security.
+
 
 ## Prerequisites
 
@@ -21,6 +23,7 @@ Before you begin, ensure you have the following installed:
 * **Python:** Version 3.6 or higher.
 * **Rich:** A Python library for rich text and beautiful formatting in the terminal. You can install it using `pip install rich`.
 * **G++ Compiler:** The GNU C++ compiler, necessary for compiling C/C++ submissions.
+* **Docker:** Required for running the system in a containerized environment.
 
 ## Installation
 
@@ -39,13 +42,19 @@ Get up and running in just a few steps:
 
 ## Quick Start
 
-Simply run the bootstrap script to start the evaluation process:
+If you prefer to run Smart TA in a containerized environment, follow these steps:
 
-```bash
-./bootstrap.sh
-```
+1. **Build the Docker Image:**
+    ```bash
+    ./bootstrap --build
+    ```
 
-This will launch the application and guide you through the evaluation workflow.
+2. **Run the Docker Container:**
+    ```bash
+    ./bootstrap --start
+    ```
+
+This ensures the evaluation system runs in a clean and isolated environment without requiring local dependencies.
 
 ## Contributing
 
