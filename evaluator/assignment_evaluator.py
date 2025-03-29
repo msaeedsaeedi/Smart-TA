@@ -7,6 +7,8 @@ from datetime import datetime
 from rich.prompt import Prompt, Confirm
 from rich.console import Console
 from rich.panel import Panel
+from rich.progress import Progress, SpinnerColumn, TextColumn
+from rich.table import Table
 
 from utils.file_utils import find_student_zip
 from utils.config_handler import ConfigHandler
@@ -62,12 +64,66 @@ class AssignmentEvaluator:
             self.console.print(f"[bold yellow]Warning:[/bold yellow] Submission file '{os.path.basename(zip_file)}' does not match required format '{self.config_handler.config.get('Submission Guidelines', {}).get('Format', 'ZIP')}'")
         return zip_file
 
-    def evaluate_submission(self, roll_number: str, question: str):
+    def evaluate_submission(self, roll_number: str, question: str = None):
         """
         Evaluate submission for a specific student
         
         :param roll_number: Student's roll number
-        :param question: Question to evaluate
+        :param question: Specific question to evaluate (or None for all questions)
+        """
+        student_zip = self.find_student_zip(roll_number)
+        if not student_zip:
+            self.console.print(f"[bold red]No submission ZIP found for {roll_number}[/bold red]")
+            return
+            
+        # Extract the submission
+        try:
+            extraction_dir = os.path.join(self.output_log_path, roll_number)
+            self.submission_processor.extract_submission(student_zip, self.output_log_path)
+            
+            # Get all configured questions
+            marks_distribution = self.config_handler.get_marks_distribution()
+            question_keys = []
+            
+            for key in marks_distribution.keys():
+                # Extract question number from "Question X" format
+                if key.startswith("Question "):
+                    q_num = key.split(" ")[1]
+                    question_keys.append(q_num)
+                else:
+                    # If it's already just the question number
+                    question_keys.append(key)
+            
+            # If a specific question is provided, only evaluate that one
+            if question:
+                if question in question_keys:
+                    self._evaluate_single_question(roll_number, question, extraction_dir)
+                else:
+                    self.console.print(f"[bold red]Question {question} is not defined in the marks distribution[/bold red]")
+            else:
+                # Evaluate all questions
+                self.console.print(Panel(
+                    f"Evaluating submission for [bold]{roll_number}[/bold]",
+                    border_style="cyan"
+                ))
+                
+                for q_num in question_keys:
+                    self._evaluate_single_question(roll_number, q_num, extraction_dir)
+
+        except Exception as e:
+            self.console.print(f"[bold red]Evaluation Error: {str(e)}[/bold red]")
+            
+        finally:
+            # Clean up extracted files
+            shutil.rmtree(extraction_dir, ignore_errors=True)
+
+    def _evaluate_single_question(self, roll_number: str, question: str, extraction_dir: str):
+        """
+        Evaluate a single question for a student
+        
+        :param roll_number: Student's roll number
+        :param question: Question number to evaluate
+        :param extraction_dir: Directory with extracted files
         """
         # Validate question number against config
         valid, max_marks = self.config_handler.validate_question_number(question)
@@ -75,55 +131,68 @@ class AssignmentEvaluator:
             self.console.print(f"[bold red]Question {question} is not defined in the marks distribution[/bold red]")
             return
             
-        student_zip = self.find_student_zip(roll_number)
-        try:
-            self.submission_processor.extract_submission(student_zip, self.output_log_path)
+        # Find matching file
+        matching_files = [
+            f for f in os.listdir(extraction_dir) 
+            if f.startswith(f'Q{question}') and f.endswith(('.cpp', '.c'))
+        ]
 
-            # Find matching file
-            matching_files = [
-                f for f in os.listdir(os.path.join(self.output_log_path, roll_number)) 
-                if f.startswith(f'Q{question}') and f.endswith(('.cpp', '.c'))
-            ]
-
-            if not matching_files:
-                raise FileNotFoundError(f"No matching file found for question {question} in {student_zip}")
-
-            # Process the submission
-            file_path = os.path.join(self.output_log_path, roll_number, matching_files[0])
-            run_result = self.code_runner.compile_and_run_code(file_path)
-
-            # Ask for evaluation
-            while True:
-                marks = Prompt.ask(f"[bold blue]Enter marks (0-{max_marks}) [/bold blue]")
-                try:
-                    float_marks = float(marks)
-                    if 0 <= float_marks <= max_marks:
-                        break
-                    self.console.print(f"[bold red]Marks must be between 0 and {max_marks}[/bold red]")
-                except ValueError:
-                    self.console.print("[bold red]Please enter a valid number[/bold red]")
+        if not matching_files:
+            self.console.print(Panel(
+                f"No submission file found for Question {question}",
+                title="[bold yellow]Missing Submission[/bold yellow]",
+                border_style="yellow"
+            ))
             
-            # Ask for feedback
-            feedback = Prompt.ask(
-                "[bold cyan]Additional feedback (optional)[/bold cyan]",
-                default=""
+            # Mark as missing with 0 marks
+            if Confirm.ask(
+                f"[yellow]Would you like to mark Question {question} as missing (0/{max_marks} marks)?[/yellow]",
+                default=True
+            ):
+                self._log_evaluation_result(
+                    roll_number, 
+                    question, 
+                    {'compiled': False, 'missing': True}, 
+                    0, 
+                    "Question not attempted"
+                )
+            self.console.print(
+                f"[bold green]✓[/bold green] [yellow]Question {question} has been marked as missing[/yellow]"
             )
-            
-            # Log the results
-            self._log_evaluation_result(
-                roll_number, 
-                question, 
-                run_result, 
-                float_marks, 
-                feedback, 
-            )
-            self.console.print(f"[bold green]✓ Marks ({float_marks}) and feedback saved[/bold green]")
+            return
 
-        except Exception as e:
-            raise Exception(f"(Evaluation Error) {e}")
+        # Process the submission
+        file_path = os.path.join(extraction_dir, matching_files[0])
+        self.console.print(f"[bold blue]Evaluating Question {question}[/bold blue] - File: {matching_files[0]}")
         
-        finally:
-            shutil.rmtree(os.path.join(self.output_log_path, roll_number), ignore_errors=True)
+        run_result = self.code_runner.compile_and_run_code(file_path)
+
+        # Ask for evaluation
+        while True:
+            marks = Prompt.ask(f"[bold blue]Enter marks (0-{max_marks}) [/bold blue]")
+            try:
+                float_marks = float(marks)
+                if 0 <= float_marks <= max_marks:
+                    break
+                self.console.print(f"[bold red]Marks must be between 0 and {max_marks}[/bold red]")
+            except ValueError:
+                self.console.print("[bold red]Please enter a valid number[/bold red]")
+        
+        # Ask for feedback
+        feedback = Prompt.ask(
+            "[bold cyan]Additional feedback (optional)[/bold cyan]",
+            default=""
+        )
+        
+        # Log the results
+        self._log_evaluation_result(
+            roll_number, 
+            question, 
+            run_result, 
+            float_marks, 
+            feedback,
+        )
+        self.console.print(f"[bold green]✓ Question {question}: Marks ({float_marks}/{max_marks}) and feedback saved[/bold green]")
 
     def _log_evaluation_result(self, roll_number: str, question: str, 
                               run_result: Dict, marks: float, feedback: str):
@@ -173,51 +242,3 @@ class AssignmentEvaluator:
             )
             with open(log_path, 'w') as f:
                 json.dump(self.student_logs[roll_number], f, indent=2)
-
-    def show_summary(self, roll_number: str):
-        """
-        Show a summary of marks for a student
-        
-        :param roll_number: Student's roll number
-        """
-        if roll_number not in self.student_logs:
-            self.console.print(f"[bold red]No evaluation data found for {roll_number}[/bold red]")
-            return
-            
-        log = self.student_logs[roll_number]
-        total_awarded = 0
-        total_possible = 0
-        
-        marks_table = []
-        for question, data in log['submissions'].items():
-            max_marks = data.get('max_marks', 0)
-            marks = data.get('awarded_marks', 0)
-            total_awarded += marks
-            total_possible += max_marks
-            marks_table.append({
-                'Question': question,
-                'Marks': f"{marks}/{max_marks}",
-                'Feedback': data.get('feedback', '')[:30] + ('...' if len(data.get('feedback', '')) > 30 else '')
-            })
-            
-        # Show summary panel
-        self.console.print(Panel(
-            f"Student: {roll_number}\n"
-            f"Assignment: {log.get('assignment', 'Unknown')}\n"
-            f"Evaluator: {log.get('evaluator', 'Unknown')}\n"
-            f"Total Score: {total_awarded}/{total_possible} ({(total_awarded/total_possible*100) if total_possible else 0:.1f}%)",
-            title="Evaluation Summary",
-            border_style="cyan"
-        ))
-        
-        # Display marks table
-        from rich.table import Table
-        table = Table(title="Question Breakdown")
-        table.add_column("Question", style="cyan")
-        table.add_column("Marks", style="green")
-        table.add_column("Feedback", style="yellow")
-        
-        for row in marks_table:
-            table.add_row(f"Q{row['Question']}", row['Marks'], row['Feedback'])
-            
-        self.console.print(table)
